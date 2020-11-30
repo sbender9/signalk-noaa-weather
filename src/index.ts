@@ -48,7 +48,7 @@ export default function (app: any) {
       
       setTimeout(getForecast, 5000)
       timers.push(setInterval(getForecast,
-                              (props.observationsInterval || 60*60) * 1000))
+                              (props.forcastInterval || 60*60) * 1000))
     },
 
     stop: function () {
