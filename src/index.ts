@@ -218,6 +218,10 @@ export default function (app: any) {
                 }
                 values.push(...[
                   {
+                    path: `${pkey}.name`,
+                    value: period.name
+                  },
+                  {
                     path: `${pkey}.temperature`,
                     value: (period.temperature - 32) * (5/9) + 273.15
                   },
