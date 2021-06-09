@@ -46,7 +46,9 @@ export default function (app: any) {
         getObservations(props)
       }, (props.observationsInterval || 60) * 1000))
       
-      setTimeout(getForecast, 5000)
+      setTimeout(() => {
+        getForecast(props)
+      }, 5000)
       timers.push(setInterval(getForecast,
                               (props.forcastInterval || 60*60) * 1000))
     },
@@ -66,7 +68,12 @@ export default function (app: any) {
       properties: {
         station: {
           type: 'string',
-          title: 'Station',
+          title: 'Observation Station',
+          description: 'NOAA Station Name (leave blank to use the closest)',
+        },
+        forcastStation: {
+          type: 'string',
+          title: 'Forcast Station',
           description: 'NOAA Station Name (leave blank to use the closest)',
         },
         forcastInterval: {
@@ -122,7 +129,7 @@ export default function (app: any) {
     }
   }
 
-  function getObservations(props: string) {
+  function getObservations(props: any) {
     getStation(props).then((info:any) => {
       fetch(api + `/stations/${info.id}/observations/latest`)
         .then((res: any) => {
@@ -144,9 +151,16 @@ export default function (app: any) {
             })
           }
 
+          if ( info.id ) {
+            values.push({
+              path: 'environment.observations.stationId',
+              value: info.id
+            })
+          }
+
           if ( !json.properties )
             return
-          
+        
           Object.keys(json.properties).forEach(key => {
             const data = json.properties[key]
 
@@ -196,11 +210,18 @@ export default function (app: any) {
       })
   }
 
-  function getForecast() {
+  function getForecast(props:any) {
     const position = app.getSelfPath('navigation.position')
     if ( position && position.value ) {
-      app.debug('fetching forecasts')
-      fetch(api + `/points/${position.value.latitude.toFixed(4)},${position.value.longitude.toFixed(4)}`)
+      let url
+
+      if ( props.forcastStation ) {
+        url = api + `/stations/${props.forcastStation}`
+      } else {
+        url =  api + `/points/${position.value.latitude.toFixed(4)},${position.value.longitude.toFixed(4)}`
+      }
+      app.debug('fetching forecast via %s', url)
+      fetch(url)
         .then((r: any) => r.json())
         .then((json: any) => {
           fetch(json.properties.forecast)
