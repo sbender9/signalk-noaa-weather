@@ -125,7 +125,14 @@ export default function (app: any) {
   function getObservations(props: string) {
     getStation(props).then((info:any) => {
       fetch(api + `/stations/${info.id}/observations/latest`)
-        .then((r: any) => r.json())
+        .then((res: any) => {
+          if ( res.ok ) {
+            return res.json()
+          } else {
+            app.setPluginError(`no observations for station ${info.id}`)
+            return {}
+          }
+        })
         .then((json: any) => {
           const values: any = []
           const metas: any = []
@@ -136,6 +143,9 @@ export default function (app: any) {
               value: info.name
             })
           }
+
+          if ( !json.properties )
+            return
           
           Object.keys(json.properties).forEach(key => {
             const data = json.properties[key]
