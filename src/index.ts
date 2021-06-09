@@ -49,8 +49,18 @@ export default function (app: any) {
       setTimeout(() => {
         getForecast(props)
       }, 5000)
-      timers.push(setInterval(getForecast,
-                              (props.forcastInterval || 60*60) * 1000))
+      timers.push(setInterval(() => {
+        getForecast(props)
+      }, (props.forcastInterval || 60*60) * 1000))
+
+      if ( props.sendNotifications && props.notificationStates ) {
+        setTimeout(() => {
+          sendNotifications(props)
+        }, 5000)
+        timers.push(setInterval(() => {
+          sendNotifications(props)
+        }, (props.notificationsInterval || 60*60) * 1000))
+      }
     },
 
     stop: function () {
@@ -76,16 +86,33 @@ export default function (app: any) {
           title: 'Forcast Station',
           description: 'NOAA Station Name (leave blank to use the closest)',
         },
+        sendNotifications: {
+          type: 'boolean',
+          title: 'Send Alerts',
+          default: true
+        },
+        notificationStates: {
+          type: 'string',
+          title: 'Notification States',
+          description: 'Comma separated list of US state abbreviations',
+          default: 'MD'
+        },
         forcastInterval: {
           type: 'number',
           title: 'Forecast Interval',
-          description: '',
+          description: 'in seconds',
           default: 60*60
         },
         observationsInterval: {
           type: 'number',
           title: 'Observations Interval',
-          description: '',
+          description: 'in seconds',
+          default: 60
+        },
+        notificationsInterval: {
+          type: 'number',
+          title: 'Notifications Interval',
+          description: 'in seconds',
           default: 60
         }
       }
@@ -211,6 +238,7 @@ export default function (app: any) {
   }
 
   function getForecast(props:any) {
+    props
     const position = app.getSelfPath('navigation.position')
     if ( position && position.value ) {
       let url
@@ -330,6 +358,85 @@ export default function (app: any) {
           app.setPluginError(err.message)
         })
     }
+  }
+
+  function sendNotifications(props:any) {
+    props.notificationStates.split(',')
+      .forEach((state:string) => {
+        app.debug(`getting alerts for ${state}`)
+        fetch(api + `/alerts/active?area=${state}&status=actual`)
+          .then((r: any) => r.json())
+          .then((json: any) => {
+
+            if ( !json.features )
+              return
+
+            json.features.forEach((feature:any) => {
+              const alert = feature.properties
+              const id = alert.id.replace(/\./g, '_')
+              const path = `notifications.noaa.${id}`
+              const values:any = []
+              const existing = app.getSelfPath(path + '.value')
+              
+              if  ( alert.messageType === 'Cancel' ) {
+                if ( existing ) {
+                  app.handleMessage(plugin.id, {
+                    updates:[
+                      {
+                        values: [
+                          {
+                            path,
+                            value: { ...existing, state: 'normal' }
+                          }
+                        ]
+                      }
+                    ]
+                  })
+                }
+              } else {
+                let method = [ 'visual', 'sound' ]
+                if ( existing && existing.state !== 'normal' ) {
+                  method = existing.method
+                }
+                const message = alert.parameters && alert.parameters.NWSheadline ? alert.parameters.NWSheadline[0] : alert.headline
+                const notif = {
+                  sent: alert.sent,
+                  effective: alert.effective,
+                  onset: alert.onset,
+                  expires: alert.expires,
+                  ends: alert.ends,
+                  category: alert.category,
+                  severity: alert.severity,
+                  certainty: alert.certainty,
+                  urgency: alert.urgency,
+                  event: alert.event,
+                  description: alert.description,
+                  
+                  message,
+                  state: 'alert',
+                  method
+                }
+                app.debug('sending %j', notif)
+                app.handleMessage(plugin.id, {
+                  updates:[
+                    {
+                      values: [
+                        {
+                          path,
+                          value: notif
+                        }
+                      ]
+                    }
+                  ]
+                })
+              }
+            })
+          })
+          .catch((err: any) => {
+            app.error(err)
+            app.setPluginError(err.message)
+          })
+      })
   }
   
   function convertUnits(units: string, value: any) {
