@@ -37,6 +37,7 @@ export default function (app: any) {
   let timers: any = []
   let sentMetaPaths: any = {}
   let hardStationName: string
+  let defaulMethod: string[]
 
   const plugin: Plugin = {
     start: function (props: any) {
@@ -67,6 +68,17 @@ export default function (app: any) {
             sendNotifications(props)
           }, (props.notificationsInterval || 60 * 60) * 1000)
         )
+      }
+      if (typeof props.notificationVisual !== 'undefined') {
+        defaulMethod = []
+        if (props.notificationVisual) {
+          defaulMethod.push('visual')
+        }
+        if (props.notificationSound) {
+          defaulMethod.push('sound')
+        }
+      } else {
+        defaulMethod = ['visual', 'sound']
       }
     },
 
@@ -104,6 +116,22 @@ export default function (app: any) {
           title: 'Notification States',
           description: 'Comma separated list of US state abbreviations',
           default: 'MD'
+        },
+        notificationVisual: {
+          type: 'boolean',
+          title: 'Notification Method Visual',
+          default: true
+        },
+        notificationSound: {
+          type: 'boolean',
+          title: 'Notification Method Sound',
+          default: true
+        },
+        notificationState: {
+          type: 'string',
+          title: 'Notification State',
+          enum: ['normal', 'alert', 'warn', 'alarm', 'emergency'],
+          default: 'alert'
         },
         forcastInterval: {
           type: 'number',
@@ -402,6 +430,7 @@ export default function (app: any) {
 
             if (alert.messageType === 'Cancel') {
               if (existing) {
+                app.debug('canceling %s: %s', id, existing.message)
                 app.handleMessage(plugin.id, {
                   updates: [
                     {
@@ -416,7 +445,7 @@ export default function (app: any) {
                 })
               }
             } else {
-              let method = ['visual', 'sound']
+              let method = defaulMethod
               if (existing && existing.state !== 'normal') {
                 method = existing.method
               }
@@ -439,10 +468,13 @@ export default function (app: any) {
                 sourceState: state,
                 id,
                 message,
-                state: 'alert',
+                state: props.notificationState || 'alert',
                 method
               }
-              app.debug('sending %j', notif)
+              //app.debug('sending %j', notif)
+              if (!existing || existing.state === 'normal') {
+                app.debug('sending %s: %s', id, message)
+              }
               currentAlerts.push(id)
               app.handleMessage(plugin.id, {
                 updates: [
@@ -468,6 +500,11 @@ export default function (app: any) {
                   currentAlerts.indexOf(notification.value.id) === -1 &&
                   notification.value.state !== 'normal'
                 ) {
+                  app.debug(
+                    'clearing %s: %s',
+                    notification.value.id,
+                    notification.value.message
+                  )
                   app.handleMessage(plugin.id, {
                     updates: [
                       {
