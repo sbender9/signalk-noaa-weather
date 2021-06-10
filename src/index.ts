@@ -384,14 +384,14 @@ export default function (app: any) {
   }
 
   function sendNotifications (props: any) {
-    const currentAlerts: any = []
-
     props.notificationStates.split(',').forEach((state: string) => {
       app.debug(`getting alerts for ${state}`)
       fetch(api + `/alerts/active?area=${state}&status=actual`)
         .then((r: any) => r.json())
         .then((json: any) => {
           if (!json.features) return
+
+          const currentAlerts: any = []
 
           json.features.forEach((feature: any) => {
             const alert = feature.properties
@@ -436,6 +436,7 @@ export default function (app: any) {
                 urgency: alert.urgency,
                 event: alert.event,
                 description: alert.description,
+                sourceState: state,
                 id,
                 message,
                 state: 'alert',
@@ -457,36 +458,38 @@ export default function (app: any) {
               })
             }
           })
+          const existingNotifications = app.getSelfPath('notifications.noaa')
+          if (existingNotifications) {
+            //app.debug('existingNotifications: %j', existingNotifications)
+            Object.values(existingNotifications).forEach(
+              (notification: any) => {
+                if (
+                  notification.value.sourceState === state &&
+                  currentAlerts.indexOf(notification.value.id) === -1 &&
+                  notification.value.state !== 'normal'
+                ) {
+                  app.handleMessage(plugin.id, {
+                    updates: [
+                      {
+                        values: [
+                          {
+                            path: `notifications.noaa.${notification.id}`,
+                            value: { ...notification.value, state: 'normal' }
+                          }
+                        ]
+                      }
+                    ]
+                  })
+                }
+              }
+            )
+          }
         })
         .catch((err: any) => {
           app.error(err)
           app.setPluginError(err.message)
         })
     })
-
-    const existingNotifications = app.getSelfPath('notifications.noaa')
-    if (existingNotifications) {
-      //app.debug('existingNotifications: %j', existingNotifications)
-      Object.values(existingNotifications).forEach((notification: any) => {
-        if (
-          currentAlerts.indexOf(notification.id) === -1 &&
-          notification.state !== 'normal'
-        ) {
-          app.handleMessage(plugin.id, {
-            updates: [
-              {
-                values: [
-                  {
-                    path: `notifications.noaa.${notification.id}`,
-                    value: { ...notification, state: 'normal' }
-                  }
-                ]
-              }
-            ]
-          })
-        }
-      })
-    }
   }
 
   function convertUnits (units: string, value: any) {
