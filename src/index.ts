@@ -108,7 +108,7 @@ export default function (app: any) {
         },
         sendNotifications: {
           type: 'boolean',
-          title: 'Send Alerts',
+          title: 'Send Notifications',
           default: true
         },
         notificationStates: {
@@ -444,7 +444,7 @@ export default function (app: any) {
                   ]
                 })
               }
-            } else {
+            } else if (alert.messageType === 'Alert') {
               let method = defaulMethod
               if (existing && existing.state !== 'normal') {
                 method = existing.method
