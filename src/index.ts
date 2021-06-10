@@ -449,6 +449,10 @@ export default function (app: any) {
               if (existing && existing.state !== 'normal') {
                 method = existing.method
               }
+              let message = alert.headline
+              if ( alert.areaDesc ) {
+                message = `${message} for ${alert.areaDesc}` 
+              }
               const notif = {
                 sent: alert.sent,
                 effective: alert.effective,
@@ -463,13 +467,13 @@ export default function (app: any) {
                 description: alert.description,
                 sourceState: state,
                 id,
-                message: alert.headline,
+                message,
                 state: props.notificationState || 'alert',
                 method
               }
               //app.debug('sending %j', notif)
               if (!existing || existing.state === 'normal') {
-                app.debug('sending %s: %s', id, alert.headline)
+                app.debug('sending %s: %s', id, message)
               }
               currentAlerts.push(id)
               app.handleMessage(plugin.id, {
