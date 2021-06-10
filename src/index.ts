@@ -473,7 +473,7 @@ export default function (app: any) {
                       {
                         values: [
                           {
-                            path: `notifications.noaa.${notification.id}`,
+                            path: `notifications.noaa.${notification.value.id}`,
                             value: { ...notification.value, state: 'normal' }
                           }
                         ]
