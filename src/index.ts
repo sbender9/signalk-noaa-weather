@@ -40,26 +40,33 @@ export default function (app: any) {
 
   const plugin: Plugin = {
     start: function (props: any) {
-      
-      setTimeout( () => { getObservations(props) }, 5000)
-      timers.push(setInterval(() => {
+      setTimeout(() => {
         getObservations(props)
-      }, (props.observationsInterval || 60) * 1000))
-      
+      }, 5000)
+      timers.push(
+        setInterval(() => {
+          getObservations(props)
+        }, (props.observationsInterval || 60) * 1000)
+      )
+
       setTimeout(() => {
         getForecast(props)
       }, 5000)
-      timers.push(setInterval(() => {
-        getForecast(props)
-      }, (props.forcastInterval || 60*60) * 1000))
+      timers.push(
+        setInterval(() => {
+          getForecast(props)
+        }, (props.forcastInterval || 60 * 60) * 1000)
+      )
 
-      if ( props.sendNotifications && props.notificationStates ) {
+      if (props.sendNotifications && props.notificationStates) {
         setTimeout(() => {
           sendNotifications(props)
         }, 5000)
-        timers.push(setInterval(() => {
-          sendNotifications(props)
-        }, (props.notificationsInterval || 60*60) * 1000))
+        timers.push(
+          setInterval(() => {
+            sendNotifications(props)
+          }, (props.notificationsInterval || 60 * 60) * 1000)
+        )
       }
     },
 
@@ -70,21 +77,22 @@ export default function (app: any) {
       timers = []
     },
 
-    id: "signalk-noaa-weather",
-    name: "NOAA Weather",
-    description: "Signal K Plugin to get current weather and forecast from NOAA",
+    id: 'signalk-noaa-weather',
+    name: 'NOAA Weather',
+    description:
+      'Signal K Plugin to get current weather and forecast from NOAA',
     schema: {
-      type: "object",
+      type: 'object',
       properties: {
         station: {
           type: 'string',
           title: 'Observation Station',
-          description: 'NOAA Station Name (leave blank to use the closest)',
+          description: 'NOAA Station Name (leave blank to use the closest)'
         },
         forcastStation: {
           type: 'string',
           title: 'Forcast Station',
-          description: 'NOAA Station Name (leave blank to use the closest)',
+          description: 'NOAA Station Name (leave blank to use the closest)'
         },
         sendNotifications: {
           type: 'boolean',
@@ -101,7 +109,7 @@ export default function (app: any) {
           type: 'number',
           title: 'Forecast Interval',
           description: 'in seconds',
-          default: 60*60
+          default: 60 * 60
         },
         observationsInterval: {
           type: 'number',
@@ -119,16 +127,16 @@ export default function (app: any) {
     }
   }
 
-  function getStation(props: any) {
-    if ( props.station && props.station.length > 0 ) {
-      if ( hardStationName ) {
-        return Promise.resolve({id: props.station, name: hardStationName})
+  function getStation (props: any) {
+    if (props.station && props.station.length > 0) {
+      if (hardStationName) {
+        return Promise.resolve({ id: props.station, name: hardStationName })
       } else {
         return new Promise((resolve, reject) => {
           fetch(api + `/stations/${props.station}`)
             .then((r: any) => r.json())
             .then((json: any) => {
-              resolve({id: props.station, name: json.properties.name})
+              resolve({ id: props.station, name: json.properties.name })
             })
             .catch(reject)
         })
@@ -136,117 +144,128 @@ export default function (app: any) {
     } else {
       return new Promise((resolve, reject) => {
         const position = app.getSelfPath('navigation.position')
-        if ( position && position.value ) {
-          fetch(api + `/points/${position.value.latitude.toFixed(4)},${position.value.longitude.toFixed(4)}/stations`)
-            .then((r:any) => r.json())
-            .then((json:any) => {
-              if ( json.features && json.features.length > 0 ) {
+        if (position && position.value) {
+          fetch(
+            api +
+              `/points/${position.value.latitude.toFixed(
+                4
+              )},${position.value.longitude.toFixed(4)}/stations`
+          )
+            .then((r: any) => r.json())
+            .then((json: any) => {
+              if (json.features && json.features.length > 0) {
                 let station = json.features[0]
-                resolve({id: station.properties.stationIdentifier,
-                         name: station.properties.name})
+                resolve({
+                  id: station.properties.stationIdentifier,
+                  name: station.properties.name
+                })
               } else {
-                reject(new Error("no stations found"))
+                reject(new Error('no stations found'))
               }
             })
             .catch(reject)
         } else {
-          reject(new Error("no position"))
+          reject(new Error('no position'))
         }
       })
     }
   }
 
-  function getObservations(props: any) {
-    getStation(props).then((info:any) => {
-      fetch(api + `/stations/${info.id}/observations/latest`)
-        .then((res: any) => {
-          if ( res.ok ) {
-            return res.json()
-          } else {
-            app.setPluginError(`no observations for station ${info.id}`)
-            return {}
-          }
-        })
-        .then((json: any) => {
-          const values: any = []
-          const metas: any = []
-
-          if ( info.name ) {
-            values.push({
-              path: 'environment.observations.stationName',
-              value: info.name
-            })
-          }
-
-          if ( info.id ) {
-            values.push({
-              path: 'environment.observations.stationId',
-              value: info.id
-            })
-          }
-
-          if ( !json.properties )
-            return
-        
-          Object.keys(json.properties).forEach(key => {
-            const data = json.properties[key]
-
-            if ( data.value ) {
-              //console.log(JSON.stringify(data))
-              const info: any = convertUnits(data.unitCode, data.value)
-              const path: string = `environment.observations.${key}`
-              values.push({
-                path,
-                value: info.value
-              })
-              if ( info.units && !sentMetaPaths[path] ) {
-                sentMetaPaths[path] = true
-                metas.push({
-                  path,
-                  value: { units: info.units }
-                })
-              }
+  function getObservations (props: any) {
+    getStation(props)
+      .then((info: any) => {
+        fetch(api + `/stations/${info.id}/observations/latest`)
+          .then((res: any) => {
+            if (res.ok) {
+              return res.json()
+            } else {
+              app.setPluginError(`no observations for station ${info.id}`)
+              return {}
             }
           })
-          if ( metas.length > 0 ) {
+          .then((json: any) => {
+            const values: any = []
+            const metas: any = []
+
+            if (info.name) {
+              values.push({
+                path: 'environment.observations.stationName',
+                value: info.name
+              })
+            }
+
+            if (info.id) {
+              values.push({
+                path: 'environment.observations.stationId',
+                value: info.id
+              })
+            }
+
+            if (!json.properties) return
+
+            Object.keys(json.properties).forEach(key => {
+              const data = json.properties[key]
+
+              if (data.value) {
+                //console.log(JSON.stringify(data))
+                const info: any = convertUnits(data.unitCode, data.value)
+                const path: string = `environment.observations.${key}`
+                values.push({
+                  path,
+                  value: info.value
+                })
+                if (info.units && !sentMetaPaths[path]) {
+                  sentMetaPaths[path] = true
+                  metas.push({
+                    path,
+                    value: { units: info.units }
+                  })
+                }
+              }
+            })
+            if (metas.length > 0) {
+              app.handleMessage(plugin.id, {
+                updates: [
+                  {
+                    meta: metas
+                  }
+                ]
+              })
+            }
+
             app.handleMessage(plugin.id, {
-              updates:[
+              updates: [
                 {
-                  meta: metas
+                  values: values
                 }
               ]
             })
-          }
-
-          app.handleMessage(plugin.id, {
-            updates:[
-              {
-                values: values
-              }
-            ]
           })
-        })
-        .catch((err: any) => {
-          app.error(err)
-          app.setPluginError(err.message)
-        })
-    })
+          .catch((err: any) => {
+            app.error(err)
+            app.setPluginError(err.message)
+          })
+      })
       .catch((err: any) => {
         app.error(err)
         app.setPluginError(err.message)
       })
   }
 
-  function getForecast(props:any) {
+  function getForecast (props: any) {
     props
     const position = app.getSelfPath('navigation.position')
-    if ( position && position.value ) {
+    if (position && position.value) {
       let url
 
-      if ( props.forcastStation ) {
+      if (props.forcastStation) {
         url = api + `/stations/${props.forcastStation}`
       } else {
-        url =  api + `/points/${position.value.latitude.toFixed(4)},${position.value.longitude.toFixed(4)}`
+        url =
+          api +
+          `/points/${position.value.latitude.toFixed(
+            4
+          )},${position.value.longitude.toFixed(4)}`
       }
       app.debug('fetching forecast via %s', url)
       fetch(url)
@@ -258,7 +277,7 @@ export default function (app: any) {
               let values: any = []
               let metas: any = []
 
-              if ( !forecast.properties.periods ) {
+              if (!forecast.properties.periods) {
                 app.debug('props %j', forecast.properties)
                 app.setPluginError('no forecast periods')
                 return
@@ -269,71 +288,75 @@ export default function (app: any) {
                 let windSpeed = null
                 let windDirection = null
 
-                if ( period.windSpeed ) {
-                  windSpeed = Number(period.windSpeed.split(' ')[0])/2.237
+                if (period.windSpeed) {
+                  windSpeed = Number(period.windSpeed.split(' ')[0]) / 2.237
                 }
-                if ( period.windDirection ) {
+                if (period.windDirection) {
                   windDirection = convertDirection(period.windDirection)
                 }
-                values.push(...[
-                  {
-                    path: `${pkey}.name`,
-                    value: period.name
-                  },
-                  {
-                    path: `${pkey}.temperature`,
-                    value: (period.temperature - 32) * (5/9) + 273.15
-                  },
-                  {
-                    path: `${pkey}.temperatureTrend`,
-                    value: period.temperatureTrend
-                  },
-                  {
-                    path: `${pkey}.windSpeed`,
-                    value: windSpeed
-                  },
-                  {
-                    path: `${pkey}.windDirection`,
-                    value: windDirection
-                  },
-                  {
-                    path: `${pkey}.shortForecast`,
-                    value: period.shortForecast
-                  },
-                  {
-                    path: `${pkey}.detailedForecast`,
-                    value: period.detailedForecast
-                  },
-                  {
-                    path: `${pkey}.startTime`,
-                    value: new Date(period.startTime).toISOString()
-                  },
-                  {
-                    path: `${pkey}.endTime`,
-                    value: new Date(period.endTime).toISOString()
-                  },
-                ])
-                if ( !sentMetaPaths[pkey] ) {
-                  sentMetaPaths[pkey] = true
-                  metas.push(...[
+                values.push(
+                  ...[
+                    {
+                      path: `${pkey}.name`,
+                      value: period.name
+                    },
                     {
                       path: `${pkey}.temperature`,
-                      value: { units: "K" }
+                      value: (period.temperature - 32) * (5 / 9) + 273.15
+                    },
+                    {
+                      path: `${pkey}.temperatureTrend`,
+                      value: period.temperatureTrend
                     },
                     {
                       path: `${pkey}.windSpeed`,
-                      value: { units: "m/s" }
+                      value: windSpeed
                     },
                     {
                       path: `${pkey}.windDirection`,
-                      value: { units: "rad" }
+                      value: windDirection
+                    },
+                    {
+                      path: `${pkey}.shortForecast`,
+                      value: period.shortForecast
+                    },
+                    {
+                      path: `${pkey}.detailedForecast`,
+                      value: period.detailedForecast
+                    },
+                    {
+                      path: `${pkey}.startTime`,
+                      value: new Date(period.startTime).toISOString()
+                    },
+                    {
+                      path: `${pkey}.endTime`,
+                      value: new Date(period.endTime).toISOString()
                     }
-                  ])
+                  ]
+                )
+                if (!sentMetaPaths[pkey]) {
+                  sentMetaPaths[pkey] = true
+                  metas.push(
+                    ...[
+                      {
+                        path: `${pkey}.temperature`,
+                        value: { units: 'K' }
+                      },
+                      {
+                        path: `${pkey}.windSpeed`,
+                        value: { units: 'm/s' }
+                      },
+                      {
+                        path: `${pkey}.windDirection`,
+                        value: { units: 'rad' }
+                      }
+                    ]
+                  )
                 }
               })
-              if ( metas.length > 0 ) {
+              if (metas.length > 0) {
                 app.handleMessage(plugin.id, {
-                  updates:[
+                  updates: [
                     {
                       meta: metas
                     }
@@ -341,7 +364,7 @@ export default function (app: any) {
                 })
               }
               app.handleMessage(plugin.id, {
-                updates:[
+                updates: [
                   {
                     values: values
                   }
@@ -360,113 +383,139 @@ export default function (app: any) {
     }
   }
 
-  function sendNotifications(props:any) {
-    props.notificationStates.split(',')
-      .forEach((state:string) => {
-        app.debug(`getting alerts for ${state}`)
-        fetch(api + `/alerts/active?area=${state}&status=actual`)
-          .then((r: any) => r.json())
-          .then((json: any) => {
+  function sendNotifications (props: any) {
+    const currentAlerts: any = []
 
-            if ( !json.features )
-              return
+    props.notificationStates.split(',').forEach((state: string) => {
+      app.debug(`getting alerts for ${state}`)
+      fetch(api + `/alerts/active?area=${state}&status=actual`)
+        .then((r: any) => r.json())
+        .then((json: any) => {
+          if (!json.features) return
 
-            json.features.forEach((feature:any) => {
-              const alert = feature.properties
-              const id = alert.id.replace(/\./g, '_')
-              const path = `notifications.noaa.${id}`
-              const values:any = []
-              const existing = app.getSelfPath(path + '.value')
-              
-              if  ( alert.messageType === 'Cancel' ) {
-                if ( existing ) {
-                  app.handleMessage(plugin.id, {
-                    updates:[
-                      {
-                        values: [
-                          {
-                            path,
-                            value: { ...existing, state: 'normal' }
-                          }
-                        ]
-                      }
-                    ]
-                  })
-                }
-              } else {
-                let method = [ 'visual', 'sound' ]
-                if ( existing && existing.state !== 'normal' ) {
-                  method = existing.method
-                }
-                const message = alert.parameters && alert.parameters.NWSheadline ? alert.parameters.NWSheadline[0] : alert.headline
-                const notif = {
-                  sent: alert.sent,
-                  effective: alert.effective,
-                  onset: alert.onset,
-                  expires: alert.expires,
-                  ends: alert.ends,
-                  category: alert.category,
-                  severity: alert.severity,
-                  certainty: alert.certainty,
-                  urgency: alert.urgency,
-                  event: alert.event,
-                  description: alert.description,
-                  
-                  message,
-                  state: 'alert',
-                  method
-                }
-                app.debug('sending %j', notif)
+          json.features.forEach((feature: any) => {
+            const alert = feature.properties
+            const id = alert.id.replace(/\./g, '_')
+            const path = `notifications.noaa.${id}`
+            const values: any = []
+            const existing = app.getSelfPath(path + '.value')
+
+            if (alert.messageType === 'Cancel') {
+              if (existing) {
                 app.handleMessage(plugin.id, {
-                  updates:[
+                  updates: [
                     {
                       values: [
                         {
                           path,
-                          value: notif
+                          value: { ...existing, state: 'normal' }
                         }
                       ]
                     }
                   ]
                 })
               }
-            })
+            } else {
+              let method = ['visual', 'sound']
+              if (existing && existing.state !== 'normal') {
+                method = existing.method
+              }
+              const message =
+                alert.parameters && alert.parameters.NWSheadline
+                  ? alert.parameters.NWSheadline[0]
+                  : alert.headline
+              const notif = {
+                sent: alert.sent,
+                effective: alert.effective,
+                onset: alert.onset,
+                expires: alert.expires,
+                ends: alert.ends,
+                category: alert.category,
+                severity: alert.severity,
+                certainty: alert.certainty,
+                urgency: alert.urgency,
+                event: alert.event,
+                description: alert.description,
+                id,
+                message,
+                state: 'alert',
+                method
+              }
+              app.debug('sending %j', notif)
+              currentAlerts.push(id)
+              app.handleMessage(plugin.id, {
+                updates: [
+                  {
+                    values: [
+                      {
+                        path,
+                        value: notif
+                      }
+                    ]
+                  }
+                ]
+              })
+            }
           })
-          .catch((err: any) => {
-            app.error(err)
-            app.setPluginError(err.message)
+        })
+        .catch((err: any) => {
+          app.error(err)
+          app.setPluginError(err.message)
+        })
+    })
+
+    const existingNotifications = app.getSelfPath('notifications.noaa')
+    if (existingNotifications) {
+      //app.debug('existingNotifications: %j', existingNotifications)
+      Object.values(existingNotifications).forEach((notification: any) => {
+        if (
+          currentAlerts.indexOf(notification.id) === -1 &&
+          notification.state !== 'normal'
+        ) {
+          app.handleMessage(plugin.id, {
+            updates: [
+              {
+                values: [
+                  {
+                    path: `notifications.noaa.${notification.id}`,
+                    value: { ...notification, state: 'normal' }
+                  }
+                ]
+              }
+            ]
           })
+        }
       })
+    }
   }
-  
-  function convertUnits(units: string, value: any) {
+
+  function convertUnits (units: string, value: any) {
     let skUnits
-    if ( units === 'unit:percent' ) {
+    if (units === 'unit:percent') {
       value = value / 100
       skUnits = 'ratio'
-    } else if ( units === 'unit:degC' ) {
+    } else if (units === 'unit:degC') {
       value = value + 273.15
       skUnits = 'K'
-    } else if ( units === 'unit:km_h-1' ) {
+    } else if (units === 'unit:km_h-1') {
       value = value / 3.6
-      skUnits = "m/s"
-    } else if ( units === 'unit:degree_(angle)' ) {
-      value = value * (Math.PI/180.0)
+      skUnits = 'm/s'
+    } else if (units === 'unit:degree_(angle)') {
+      value = value * (Math.PI / 180.0)
       skUnits = 'rad'
-    } else if ( units === 'unit:Pa' ) {
-      skUnits = "Pa"
-    } else if ( units === 'unit:m' ) {
-      skUnits = "m"
+    } else if (units === 'unit:Pa') {
+      skUnits = 'Pa'
+    } else if (units === 'unit:m') {
+      skUnits = 'm'
     }
     return { value, units: skUnits }
   }
 
-  function convertDirection(dir: string) {
+  function convertDirection (dir: string) {
     const degrees = directionMap[dir]
-    return degrees ? degrees * (Math.PI/180.0) : null
+    return degrees ? degrees * (Math.PI / 180.0) : null
   }
 
-  
   return plugin
 }
 
