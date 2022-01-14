@@ -52,7 +52,7 @@ export default function (app: any) {
 
       setTimeout(() => {
         getForecast(props)
-      }, 5000)
+      }, 30000)
       timers.push(
         setInterval(() => {
           getForecast(props)
