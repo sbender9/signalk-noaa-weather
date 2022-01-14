@@ -234,7 +234,7 @@ export default function (app: any) {
             Object.keys(json.properties).forEach(key => {
               const data = json.properties[key]
 
-              if (data.value) {
+              if (data && data.value) {
                 //console.log(JSON.stringify(data))
                 const info: any = convertUnits(data.unitCode, data.value)
                 const path: string = `environment.observations.${key}`
