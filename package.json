@@ -1,6 +1,6 @@
 {
   "name": "signalk-noaa-weather",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "description": "Signal K Plugin to get current weather and forecast from NOAA",
   "main": "index.js",
   "scripts": {
