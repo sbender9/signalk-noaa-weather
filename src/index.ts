@@ -215,6 +215,8 @@ export default function (app: any) {
             const values: any = []
             const metas: any = []
 
+            app.setPluginStatus(`observations retrieved: ${new Date()}`)
+
             if (info.name) {
               values.push({
                 path: 'environment.observations.stationName',
