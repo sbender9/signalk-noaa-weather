@@ -533,21 +533,21 @@ export default function (app: any) {
 
   function convertUnits (units: string, value: any) {
     let skUnits
-    if (units === 'unit:percent') {
+    if (units.endsWith(':percent')) {
       value = value / 100
       skUnits = 'ratio'
-    } else if (units === 'unit:degC') {
+    } else if (units.endsWith(':degC')) {
       value = value + 273.15
       skUnits = 'K'
-    } else if (units === 'unit:km_h-1') {
+    } else if (units.endsWith(':km_h-1')) {
       value = value / 3.6
       skUnits = 'm/s'
-    } else if (units === 'unit:degree_(angle)') {
+    } else if (units.endsWith(':degree_(angle)')) {
       value = value * (Math.PI / 180.0)
       skUnits = 'rad'
-    } else if (units === 'unit:Pa') {
+    } else if (units.endsWith(':Pa')) {
       skUnits = 'Pa'
-    } else if (units === 'unit:m') {
+    } else if (units.endsWith(':m')) {
       skUnits = 'm'
     }
     return { value, units: skUnits }
