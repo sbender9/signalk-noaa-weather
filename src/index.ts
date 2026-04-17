@@ -115,7 +115,7 @@ export default function (app: any) {
           title: 'Load Forcasts',
           default: true
         },
-        loadObjervations: {
+        loadObservations: {
           type: 'boolean',
           title: 'Load Observations',
           default: true
