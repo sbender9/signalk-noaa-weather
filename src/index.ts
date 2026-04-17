@@ -41,23 +41,27 @@ export default function (app: any) {
 
   const plugin: Plugin = {
     start: function (props: any) {
-      setTimeout(() => {
-        getObservations(props)
-      }, 5000)
-      timers.push(
-        setInterval(() => {
+      if ( props.sendObservations === undefined || props.sendObservations ) {
+        setTimeout(() => {
           getObservations(props)
-        }, (props.observationsInterval || 60) * 1000)
-      )
+        }, 5000)
+        timers.push(
+          setInterval(() => {
+            getObservations(props)
+          }, (props.observationsInterval || 60) * 1000)
+        )
+      }
 
-      setTimeout(() => {
-        getForecast(props)
-      }, 30000)
-      timers.push(
-        setInterval(() => {
+      if ( props.loadForcasts === undefined || props.loadForcasts ) {
+        setTimeout(() => {
           getForecast(props)
-        }, (props.forcastInterval || 60 * 60) * 1000)
-      )
+        }, 30000)
+        timers.push(
+          setInterval(() => {
+            getForecast(props)
+          }, (props.forcastInterval || 60 * 60) * 1000)
+        )
+      }
 
       if (props.sendNotifications && props.notificationStates) {
         setTimeout(() => {
@@ -105,6 +109,16 @@ export default function (app: any) {
           type: 'string',
           title: 'Forcast Station',
           description: 'NOAA Station Name (leave blank to use the closest)'
+        },
+        loadForcasts: {
+          type: 'boolean',
+          title: 'Load Forcasts',
+          default: true
+        },
+        loadObjervations: {
+          type: 'boolean',
+          title: 'Load Observations',
+          default: true
         },
         sendNotifications: {
           type: 'boolean',
@@ -283,7 +297,6 @@ export default function (app: any) {
   }
 
   function getForecast (props: any) {
-    props
     const position = app.getSelfPath('navigation.position')
     if (position && position.value) {
       let url
