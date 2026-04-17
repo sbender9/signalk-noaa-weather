@@ -41,7 +41,7 @@ export default function (app: any) {
 
   const plugin: Plugin = {
     start: function (props: any) {
-      if ( props.sendObservations === undefined || props.sendObservations ) {
+      if ( props.loadObservations === undefined || props.loadObservations ) {
         setTimeout(() => {
           getObservations(props)
         }, 5000)
